@@ -1,0 +1,219 @@
+﻿@page "/bookList"
+@rendermode InteractiveWebAssembly
+@using BlazorBookManagement.Services
+@using BlazorBookManagement.models
+@implements IDisposable
+@inject PersistentComponentState ApplicationState
+@inject BooksService service
+
+<PageTitle>Books List</PageTitle>
+
+<h1>Books Catalog</h1>
+
+<section class="filter-section">
+    <div class="search-section">
+        <input placeholder="Search by Title" @bind="searchTitle" />
+        <input placeholder="Search by Author" @bind="searchAuthor" />
+        <input placeholder="Search by Genre" @bind="searchGenre" />
+        <button class="btn btn-primary" @onclick="SearchData">Search</button>
+    </div>
+    <div class="sort-section">
+        <label>Sort By:</label>
+
+        <select class="form-select form-select-sm" @onchange="SortByChanged">
+            <option value="Title">Title</option>
+            <option value="Author">Author</option>
+            <option value="Genre">Genre</option>
+        </select>
+        <select class="form-select form-select-sm" @onchange="SortOrderChanged">
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+        </select>
+    </div>
+</section>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Title</th>
+            <th scope="col">Author</th>
+            <th scope="col">Genre</th>
+            <th scope="col"></th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr id="editRow" style="display:@editRowStyle">
+            <td colspan="3">
+                <input class = "input-edit" @bind="editBook.Title" />
+                <input class = "input-edit" @bind="editBook.Author"/>
+                <input class = "input-edit" @bind="editBook.Genre" />
+            </td>
+            <td class="text-end">
+                <button class="btn btn-success success-color" @onclick="@(() => SaveItem(editBook))">
+                    Save
+                </button>
+                <button class="btn btn-danger" @onclick="@(() => editRowStyle = "none")">
+                    Cancel
+                </button>
+            </td>
+        </tr>
+        @foreach (var item in booksList)
+        {
+            <tr>
+                <td>@item.Title</td>
+                <td>@item.Author</td>
+                <td>@item.Genre</td>
+                <td class="text-end">
+                    <button class="btn btn-warning" @onclick="@(() => EditItem(item.Id))">
+                        Edit
+                    </button>
+                    <button class="btn btn-danger" @onclick="@(async () => await DeleteItem(item.Id))">
+                        Delete
+                    </button>
+                </td>
+            </tr>
+        }
+        <tr id="addRow">
+            <td colspan="3">
+                <input class = "input-edit" @bind="newTitle"  placeholder="Title" />
+                <input class = "input-edit" @bind="newAuthor" placeholder="Author" />
+                <input class = "input-edit" @bind="newGenre" placeholder="Genre" />
+            </td>
+            <td class="text-end">
+                <button class="btn btn-success success-color" @onclick="AddItem">Add</button>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<div>
+    <button class="btn btn-secondary" @onclick="PreviousPage" disabled="@isFirstPage">Previous</button>
+    <button class="btn btn-secondary" @onclick="NextPage" disabled="@isLastPage">Next</button>
+</div>
+
+
+@code {
+    private IList<Book> booksList = [];
+    public Book editBook = new Book();
+    private string? newTitle;
+    private string? newAuthor;
+    private string? newGenre;
+    private string editRowStyle = "none";
+    private PersistingComponentStateSubscription persistingSubscription;
+
+    private string? searchTitle;
+    private string? searchAuthor;
+    private string? searchGenre;
+
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private bool isFirstPage => currentPage == 1;
+    private bool isLastPage => booksList.Count < pageSize;
+
+    private string? sortBy = "Title";
+    private string? sortOrder = "asc";
+
+    protected override async Task OnInitializedAsync()
+    {
+        persistingSubscription = ApplicationState.RegisterOnPersisting(PersistData);
+
+        if (!ApplicationState.TryTakeFromJson<IList<Book>>(nameof(booksList), out var restoredData))
+        {
+            await GetData();
+        }
+        else
+        {
+            booksList = restoredData!;
+        }
+    }
+
+    private async Task GetData()
+    {
+        booksList = await service.GetData(searchTitle, searchAuthor, searchGenre, currentPage, pageSize, sortBy, sortOrder);
+    }
+
+    private async Task SearchData() {
+        currentPage = 1;
+        await GetData();
+    }
+
+    private async Task SortByChanged(ChangeEventArgs e)
+    {
+        sortBy = e.Value?.ToString();
+        await GetData();
+    }
+
+    private async Task SortOrderChanged(ChangeEventArgs e)
+    {
+        sortOrder = e.Value?.ToString();
+        await GetData();
+    }
+
+    private async Task AddItem()
+    {
+        if (!string.IsNullOrEmpty(newTitle))
+        {
+            var newBook = new Book() { Id = 0, Title = newTitle, Author = newAuthor, Genre = newGenre };
+            await service.AddItem(newBook);
+
+            newTitle = string.Empty;
+            newAuthor = string.Empty;
+            newGenre = string.Empty;
+
+            await GetData();
+            editRowStyle = "none";
+        }
+    }
+
+    private async Task SaveItem(Book book)
+    {
+        if (book != null)
+        {
+            await service.SaveItem(book);
+            await GetData();
+        }
+    }
+
+    private void EditItem(long id) {
+        if (booksList is not null)
+        {
+            var foundBook = booksList.Single(i => i.Id == id);
+            editBook = new Book() { Id = foundBook.Id, Title = foundBook.Title, Author = foundBook.Author, Genre = foundBook.Genre };
+            editRowStyle = "table-row";
+        }
+    }
+
+    private async Task DeleteItem(long id)
+    {
+        await service.DeleteItem(id);
+        await GetData();
+        editRowStyle = "none";
+    }
+
+    private Task PersistData()
+    {
+        ApplicationState.PersistAsJson(nameof(booksList), booksList);
+
+        return Task.CompletedTask;
+    }
+
+    private async Task PreviousPage()
+    {
+        if (currentPage > 1)
+        {
+            currentPage--;
+            await GetData();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (!isLastPage)
+        {
+            currentPage++;
+            await GetData();
+        }
+    }
+
+    void IDisposable.Dispose() => persistingSubscription.Dispose();
+}

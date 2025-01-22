@@ -1,0 +1,84 @@
+﻿
+td ::deep .success-color {
+    background-color: #006097;
+    border-color: #006097;
+}
+
+td ::deep .text-end {
+    text-align: end;
+}
+
+td ::deep .btn {
+    width: 127px;
+}
+
+td ::deep .input-edit {
+    width: 31%;
+    padding: 4px;
+}
+
+.filter-section {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 16px;
+    padding-top: 8px;
+}
+
+.search-section {
+    display: flex;
+    flex-direction: row;
+}
+
+    .search-section ::deep input {
+        margin-right: 8px;
+        width: 100%;
+    }
+    .search-section ::deep .btn {
+        width: fit-content;
+    }
+
+.sort-section {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
+.sort-section ::deep select {
+    margin-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+    .search-section {
+        flex-direction: column;
+    }
+
+    .search-section ::deep input {
+        margin-right: 0;
+        margin-bottom: 8px;
+    }
+
+    .search-section ::deep .btn {
+        margin-left: auto;
+    }
+
+    td ::deep .input-edit {
+        width: 100%;
+        
+    }    
+}
+
+@media (max-width: 1200px) {
+    td ::deep .btn {
+        width: 100%;
+        vertical-align: middle;
+    }
+
+    td ::deep .btn:not(:last-child) {
+        margin-bottom: 8px
+    }
+}
+
+@media (min-width: 1201px) {
+    #addRow ::deep td {
+        vertical-align: bottom;
+    }
+}

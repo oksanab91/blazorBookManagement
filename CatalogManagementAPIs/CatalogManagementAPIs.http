@@ -1,0 +1,6 @@
+# @CatalogManagementAPIs_HostAddress = http://localhost:7102
+
+# GET {{CatalogManagementAPIs_HostAddress}}/books/
+# Accept: application/json
+
+###
